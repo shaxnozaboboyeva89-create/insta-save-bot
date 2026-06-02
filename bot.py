@@ -72,13 +72,14 @@ async def channel_btn(message: Message):
         )
     )
 
-@dp.message(F.text == "ℹ️ Yordam")
-async def help_btn(message: Message):
-    await message.answer(
-        "📌 Instagram link yuboring.\n"
-        "📌 Kanalga obuna bo‘ling.\n"
-        "📌 Video yoki audio yuklab oling."
-    )user_links = {}
+await message.answer(
+    "📌 Instagram link yuboring.\n"
+    "📌 Kanalga obuna bo‘ling.\n"
+    "📌 Video yoki audio yuklab oling."
+)
+
+user_links = {}
+    user_links = {}
 
 @dp.message(F.text == "🔗 Link yuborish")
 async def ask_link(message: Message):

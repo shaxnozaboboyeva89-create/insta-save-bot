@@ -74,10 +74,11 @@ async def check_subscription(callback: CallbackQuery):
 
         filename = f"{callback.from_user.id}.mp4"
 
-        ydl_opts = {
-            "outtmpl": filename,
-            "format": "mp4/best"
-        }
+       ydl_opts = {
+    "outtmpl": filename,
+    "format": "best",
+    "socket_timeout": 300
+}
 
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([link])

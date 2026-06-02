@@ -1,4 +1,6 @@
 import asyncio
+import os
+
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import (
     Message,
@@ -6,17 +8,19 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
     InlineKeyboardMarkup,
-    InlineKeyboardButton
+    InlineKeyboardButton,
+    FSInputFile
 )
 
-TOKEN = "TOKENINGIZ"
+from yt_dlp import YoutubeDL
+
+TOKEN = "8951694747:AAHin4ieYfGMF2h48IW0Yg6--ramSosJ8qI"
 CHANNEL = "@instagramdanyukla"
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-user_lang = {}
-
+user_links = {}
 lang_kb = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="🇺🇿 O'zbekcha", callback_data="lang_uz")],
@@ -38,7 +42,6 @@ menu_kb = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True
 )
-
 @dp.message(F.text == "/start")
 async def start(message: Message):
     await message.answer(
@@ -46,17 +49,23 @@ async def start(message: Message):
         reply_markup=lang_kb
     )
 
+
 @dp.callback_query(F.data.startswith("lang_"))
 async def choose_lang(callback: CallbackQuery):
-    lang = callback.data.split("_")[1]
-    user_lang[callback.from_user.id] = lang
-
     await callback.message.answer(
         "📥 InstaSave Bot\n\nKerakli bo‘limni tanlang:",
         reply_markup=menu_kb
     )
 
-@dp.message(F.text == "📢 Kanal")
+
+@dp.message(F.text == "ℹ️ Yordam")
+async def help_btn(message: Message):
+    await message.answer(
+        "📌 Instagram link yuboring\n"
+        "📌 Kanalga obuna bo‘ling\n"
+        "📌 Video yoki audio yuklab oling"
+    )
+    @dp.message(F.text == "📢 Kanal")
 async def channel_btn(message: Message):
     await message.answer(
         "📢 Kanalimiz:",
@@ -72,22 +81,13 @@ async def channel_btn(message: Message):
         )
     )
 
-await message.answer(
-    "📌 Instagram link yuboring.\n"
-    "📌 Kanalga obuna bo‘ling.\n"
-    "📌 Video yoki audio yuklab oling."
-)
-
-user_links = {}
-    user_links = {}
 
 @dp.message(F.text == "🔗 Link yuborish")
 async def ask_link(message: Message):
     await message.answer(
         "📎 Instagram linkini yuboring:"
     )
-
-@dp.message(F.text.startswith("https://www.instagram.com"))
+    @dp.message(F.text.startswith("https://"))
 async def instagram_link(message: Message):
     user_links[message.from_user.id] = message.text
 
@@ -110,11 +110,10 @@ async def instagram_link(message: Message):
 
     await message.answer(
         "📥 Link qabul qilindi.\n\n"
-        "Videoni yuklash uchun kanalga obuna bo‘ling 👇",
+        "Kanalga obuna bo‘ling 👇",
         reply_markup=keyboard
     )
-
-@dp.callback_query(F.data == "check_sub")
+    @dp.callback_query(F.data == "check_sub")
 async def check_subscription(callback: CallbackQuery):
     try:
         member = await bot.get_chat_member(
@@ -122,11 +121,7 @@ async def check_subscription(callback: CallbackQuery):
             callback.from_user.id
         )
 
-        if member.status not in [
-            "member",
-            "administrator",
-            "creator"
-        ]:
+        if member.status not in ["member", "administrator", "creator"]:
             await callback.answer(
                 "❌ Avval kanalga obuna bo‘ling",
                 show_alert=True
@@ -137,13 +132,13 @@ async def check_subscription(callback: CallbackQuery):
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="🎬 Videoni yuklash",
+                        text="🎬 Video yuklash",
                         callback_data="download_video"
                     )
                 ],
                 [
                     InlineKeyboardButton(
-                        text="🎵 Audioni yuklash",
+                        text="🎵 Audio yuklash",
                         callback_data="download_audio"
                     )
                 ]
@@ -151,29 +146,19 @@ async def check_subscription(callback: CallbackQuery):
         )
 
         await callback.message.answer(
-            "✅ Obuna tasdiqlandi.\n\n"
-            "📥 Nima yuklamoqchisiz?",
+            "✅ Obuna tasdiqlandi.\n\nNimani yuklaysiz?",
             reply_markup=choose_kb
         )
 
-    except:
+    except Exception:
         await callback.answer(
-            "❌ Obunani tekshirib bo‘lmadi",
+            "❌ Obuna tekshirilmadi",
             show_alert=True
-        )import os
-from aiogram.types import FSInputFile
-from yt_dlp import YoutubeDL
-
-@dp.callback_query(F.data == "download_video")
+        )
+        @dp.callback_query(F.data == "download_video")
 async def download_video(callback: CallbackQuery):
     try:
         link = user_links.get(callback.from_user.id)
-
-        if not link:
-            await callback.message.answer(
-                "❌ Link topilmadi. Qaytadan yuboring."
-            )
-            return
 
         msg = await callback.message.answer(
             "⏳ Video yuklanmoqda..."
@@ -190,11 +175,9 @@ async def download_video(callback: CallbackQuery):
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([link])
 
-        video = FSInputFile(filename)
-
         await callback.message.answer_video(
-            video=video,
-            caption="🎬 Video tayyor!"
+            video=FSInputFile(filename),
+            caption="✅ Video tayyor"
         )
 
         if os.path.exists(filename):
@@ -204,17 +187,12 @@ async def download_video(callback: CallbackQuery):
 
     except Exception as e:
         await callback.message.answer(
-            f"❌ Video xatosi:\n{e}"
-        )@dp.callback_query(F.data == "download_audio")
+            f"❌ Xatolik:\n{e}"
+        )
+        @dp.callback_query(F.data == "download_audio")
 async def download_audio(callback: CallbackQuery):
     try:
         link = user_links.get(callback.from_user.id)
-
-        if not link:
-            await callback.message.answer(
-                "❌ Link topilmadi. Qaytadan yuboring."
-            )
-            return
 
         msg = await callback.message.answer(
             "🎵 Audio yuklanmoqda..."
@@ -229,11 +207,9 @@ async def download_audio(callback: CallbackQuery):
             info = ydl.extract_info(link, download=True)
             filename = ydl.prepare_filename(info)
 
-        audio = FSInputFile(filename)
-
         await callback.message.answer_audio(
-            audio=audio,
-            caption="🎵 Audio tayyor!"
+            audio=FSInputFile(filename),
+            caption="🎵 Audio tayyor"
         )
 
         if os.path.exists(filename):
@@ -243,5 +219,13 @@ async def download_audio(callback: CallbackQuery):
 
     except Exception as e:
         await callback.message.answer(
-            f"❌ Audio xatosi:\n{e}"
+            f"❌ Xatolik:\n{e}"
         )
+
+
+async def main():
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -1,14 +1,16 @@
 import asyncio
+import os
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import (
     Message,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
-    CallbackQuery
+    CallbackQuery,
+    FSInputFile
 )
+from yt_dlp import YoutubeDL
 
 TOKEN = "8951694747:AAHin4ieYfGMF2h48IW0Yg6--ramSosJ8qI"
-
 CHANNEL = "@instagramdanyukla"
 
 bot = Bot(token=TOKEN)
@@ -42,6 +44,7 @@ async def instagram_link(message: Message):
         reply_markup=keyboard
     )
 
+
 @dp.callback_query(F.data == "check_sub")
 async def check_subscription(callback: CallbackQuery):
     try:
@@ -50,24 +53,55 @@ async def check_subscription(callback: CallbackQuery):
             callback.from_user.id
         )
 
-        if member.status in ["member", "administrator", "creator"]:
-            await callback.message.answer(
-                "✅ Obuna tasdiqlandi.\n\nKeyingi bosqichda video yuklashni ulaymiz."
-            )
-        else:
+        if member.status not in ["member", "administrator", "creator"]:
             await callback.answer(
                 "❌ Avval kanalga obuna bo‘ling",
                 show_alert=True
             )
+            return
 
-    except:
-        await callback.answer(
-            "❌ Avval kanalga obuna bo‘ling",
-            show_alert=True
+        link = user_links.get(callback.from_user.id)
+
+        if not link:
+            await callback.message.answer(
+                "Instagram link yuboring."
+            )
+            return
+
+        msg = await callback.message.answer(
+            "⏳ Video yuklanmoqda..."
         )
+
+        filename = f"{callback.from_user.id}.mp4"
+
+        ydl_opts = {
+            "outtmpl": filename,
+            "format": "mp4/best"
+        }
+
+        with YoutubeDL(ydl_opts) as ydl:
+            ydl.download([link])
+
+        video = FSInputFile(filename)
+
+        await callback.message.answer_video(
+            video=video,
+            caption="✅ Tayyor"
+        )
+
+        os.remove(filename)
+
+        await msg.delete()
+
+    except Exception as e:
+        await callback.message.answer(
+            f"Xatolik:\n{e}"
+        )
+
 
 async def main():
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
